@@ -2,11 +2,18 @@ package com.github.rkredux;
 
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
+
 
 public class ProducerDemo {
-    public static void main(String[] args) {
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+
+        final Logger logger = LoggerFactory.getLogger(ProducerDemo.class);
 
         String bootstrapServers = "127.0.0.1:9092";
         Properties properties = new Properties();
@@ -15,20 +22,32 @@ public class ProducerDemo {
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         properties.setProperty("acks", "all");
 
-//        create the producer
         KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
 
-//        create a producer record
+        for (int i = 0; i < 11; i++) {
+            String topicName = "second_topic";
+            String key = "id_" + i;
+            String value = "This is message: " + i;
 
-        ProducerRecord<String, String> record =
-                new ProducerRecord<String, String>("first_topic","hello world");
+            logger.info("Key:" + key);
 
-//        send data
-        producer.send(record, new Callback() {
-            public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-
-            }
-        })
+            ProducerRecord<String, String> record =
+                    new ProducerRecord<String, String>(topicName,key,value);
+            producer.send(record, new Callback() {
+                public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+                    if (e == null) {
+                        logger.info("Received new metadata \n" +
+                                "Topic:" + recordMetadata.topic() + "\n" +
+                                "Partition:" + recordMetadata.partition() + "\n" +
+                                "Offset:" + recordMetadata.offset() + "\n" +
+                                "Timestamp:" + recordMetadata.timestamp() + "\n"
+                        );
+                    } else {
+                        logger.error("Error while producing:" + e);
+                    }
+                }
+            }).get();
+        };
         producer.flush();
         producer.close();
     }
