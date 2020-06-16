@@ -17,8 +17,8 @@ public class ConsumerDemo {
 
         final Logger logger = LoggerFactory.getLogger(ConsumerDemo.class);
         String bootstrapServers = "127.0.0.1:9092";
-        String groupId = "sixth_group";
-        String topic = "third_topic";
+        String groupId = "first_application";
+        String topic = "second_topic";
 
         Properties properties = new Properties();
         properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
