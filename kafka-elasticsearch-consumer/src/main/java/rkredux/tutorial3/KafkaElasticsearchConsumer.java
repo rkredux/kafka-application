@@ -118,7 +118,7 @@ public class KafkaElasticsearchConsumer {
             try {
                 while (true) {
                     ConsumerRecords<String, String> records =
-                            consumer.poll(Duration.ofMillis(100)); // new in Kafka 2
+                            consumer.poll(Duration.ofMillis(100));
                     BulkRequest bulkRequest = new BulkRequest();
                     for (ConsumerRecord<String, String> record : records){
                     //    loop over the records to form the bulkRequest object
@@ -143,14 +143,6 @@ public class KafkaElasticsearchConsumer {
             // it will throw the exception WakeUpException
             consumer.wakeup();
         }
-    }
-
-    private RestHighLevelClient createElasticsearchClient() {
-        RestHighLevelClient esClient = new RestHighLevelClient(
-        RestClient.builder(
-                        new HttpHost("localhost", 9200, "http"),
-                        new HttpHost("localhost", 9201, "http")));
-        return esClient;
     }
 
 }
