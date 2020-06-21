@@ -26,15 +26,18 @@ public class TwitterProducer {
 
     Logger logger = LoggerFactory.getLogger(TwitterProducer.class.getName());
 
+    //TODO pass this from ENV VARS in Java
     // read credentials from ENV VARS
+    //Twitter credentials
     String consumerKey = "";
     String consumerSecret = "";
     String token = "";
     String secret = "";
 
+    //TODO Use Key To Send Tweets From Each Into Its Own Partition
     List<String> terms = Lists.newArrayList("bitcoin", "usa", "politics", "sport", "soccer");
 
-
+    //TODO Test the entire thing
     public TwitterProducer(){}
 
     public static void main(String[] args) {
