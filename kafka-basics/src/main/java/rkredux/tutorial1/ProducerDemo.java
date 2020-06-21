@@ -1,4 +1,4 @@
-package com.github.rkredux.tutorial1;
+package rkredux.tutorial1;
 
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
