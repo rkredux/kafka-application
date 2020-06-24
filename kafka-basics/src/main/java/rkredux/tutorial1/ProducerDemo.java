@@ -25,7 +25,7 @@ public class ProducerDemo {
         KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
 
         for (int i = 0; i < 11; i++) {
-            String topicName = "second_topic";
+            String topicName = "tenth_topic";
             String key = "id_" + i;
             String value = "This is message: " + i;
 

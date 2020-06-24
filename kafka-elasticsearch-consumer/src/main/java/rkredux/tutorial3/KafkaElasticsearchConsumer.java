@@ -122,6 +122,7 @@ public class KafkaElasticsearchConsumer {
                     BulkRequest bulkRequest = new BulkRequest();
                     for (ConsumerRecord<String, String> record : records){
                     //    loop over the records to form the bulkRequest object
+
                     }
                     //commit the bulk request
                     //sync
