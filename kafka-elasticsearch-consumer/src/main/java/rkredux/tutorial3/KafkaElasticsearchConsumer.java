@@ -4,15 +4,23 @@ import org.apache.http.HttpHost;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.elasticsearch.action.DocWriteResponse;
+import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.ElasticsearchClient;
+import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Properties;
@@ -33,11 +41,9 @@ public class KafkaElasticsearchConsumer {
 
         //options for kafka consumer app
         String bootstrapServers = "127.0.0.1:9092";
-        String groupId = "my-latest-application";
-        String topic = "second_topic";
-
-        //options for elasticsearch client
-
+        String groupId = "june-28-application";
+        //adjust this please
+        String topic = "1593393982085topic";
 
         // latch for dealing with multiple threads
         CountDownLatch latch = new CountDownLatch(1);
@@ -51,11 +57,10 @@ public class KafkaElasticsearchConsumer {
                 latch
         );
 
-        // start the thread
+        // set up the thread
         Thread myThread = new Thread(myConsumerRunnable);
-        myThread.start();
 
-        // add a shutdown hook
+        // add a shutdown hook to the thread myThread
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             logger.info("Caught shutdown hook");
             ((ConsumerRunnable) myConsumerRunnable).shutdown();
@@ -74,6 +79,10 @@ public class KafkaElasticsearchConsumer {
         } finally {
             logger.info("Application is closing");
         }
+
+        //start the thread
+        logger.info("Starting the thread");
+        myThread.start();
     }
 
 
@@ -108,7 +117,6 @@ public class KafkaElasticsearchConsumer {
             consumer = new KafkaConsumer<String, String>(properties);
             // subscribe consumer to our topic(s)
             consumer.subscribe(Arrays.asList(topic));
-
         }
 
         @Override
@@ -122,16 +130,24 @@ public class KafkaElasticsearchConsumer {
                     BulkRequest bulkRequest = new BulkRequest();
                     for (ConsumerRecord<String, String> record : records){
                     //    loop over the records to form the bulkRequest object
-
+                        bulkRequest.add(new IndexRequest("test").source(XContentType.JSON));
                     }
-                    //commit the bulk request
-                    //sync
-                    //BulkResponse bulkResponse = esClient.bulk(request, RequestOptions.DEFAULT);
-                    //async
-                    //esClient.bulkAsync(request, RequestOptions.DEFAULT, listener);
+                    logger.info("Sending bulk request to Elasticsearch");
+                    BulkResponse bulkResponse = esClient.bulk(bulkRequest, RequestOptions.DEFAULT);
+                    for (BulkItemResponse bulkItemResponse : bulkResponse) {
+                        DocWriteResponse itemResponse = bulkItemResponse.getResponse();
+                        logger.info("The id of the doc is: " +
+                                itemResponse.getId() +
+                                " In Index " +
+                                itemResponse.getIndex()
+                        );
+                    }
+                    if (!bulkResponse.hasFailures()) {
+                        consumer.commitSync();
+                    }
                 }
-            } catch (WakeupException e) {
-                logger.info("Received shutdown signal!");
+            } catch (WakeupException | IOException e) {
+                    logger.info("Received shutdown signal!");
             } finally {
                 consumer.close();
                 // tell our main code we're done with the consumer

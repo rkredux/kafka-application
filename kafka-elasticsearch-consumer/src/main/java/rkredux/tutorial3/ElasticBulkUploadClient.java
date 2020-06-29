@@ -5,7 +5,7 @@ import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.index.IndexRequest
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
@@ -14,7 +14,6 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 
 
@@ -31,6 +30,7 @@ public class ElasticBulkUploadClient {
         //build the client
         Logger logger = LoggerFactory.getLogger(ElasticBulkUploadClient.class.getName());
         logger.info("Setting up ES client");
+
         RestHighLevelClient client = new RestHighLevelClient(
                 RestClient.builder(
                         new HttpHost("localhost", 9200, "http"),
@@ -47,11 +47,11 @@ public class ElasticBulkUploadClient {
                                 .waitForActiveShards(2);
 
         //add docs to the bulk request object
-        request.add(new IndexRequest("posts").id("13")
+        request.add(new IndexRequest("strike").id("14")
                 .source(XContentType.JSON,"field", "foo"));
-        request.add(new IndexRequest("posts").id("14")
-                .source(XContentType.JSON,"field", "bar"));
         request.add(new IndexRequest("posts").id("15")
+                .source(XContentType.JSON,"field", "bar"));
+        request.add(new IndexRequest("posts").id("16")
                 .source(XContentType.JSON,"field", "baz"));
 
         //ship the bulk process

@@ -23,9 +23,12 @@ public class ProducerDemo {
         properties.setProperty("acks", "all");
 
         KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
+        long topicPrefix = System.currentTimeMillis();
 
-        for (int i = 0; i < 11; i++) {
-            String topicName = "tenth_topic";
+        for (int i = 0; i < 100; i++) {
+
+            String topicName = topicPrefix + "topic";
+            logger.info("The topic name is: " + topicName);
             String key = "id_" + i;
             String value = "This is message: " + i;
 
