@@ -31,6 +31,7 @@ public class ElasticBulkUploadClient {
         Logger logger = LoggerFactory.getLogger(ElasticBulkUploadClient.class.getName());
         logger.info("Setting up ES client");
 
+        //3 node cluster
         RestHighLevelClient client = new RestHighLevelClient(
                 RestClient.builder(
                         new HttpHost("localhost", 9200, "http"),
