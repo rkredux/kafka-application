@@ -10,10 +10,14 @@ import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.support.ActiveShardCount;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
@@ -23,6 +27,7 @@ import java.util.Properties;
 
 
 public class KafkaElasticsearchConsumer{
+
 
     public static RestHighLevelClient restHighLevelClient(){
 
@@ -46,14 +51,16 @@ public class KafkaElasticsearchConsumer{
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
 
         KafkaConsumer<String, String> kafkaConsumer =
                 new KafkaConsumer<>(properties);
         return kafkaConsumer;
     }
 
-    //TODO Add the logic to extractId from Tweet
-    private static String extractIdFromTweet(String value) {
+
+    private static String extractIdFromTweet(String tweetValue) throws JSONException {
+        return (String) new JSONObject(tweetValue).get("id_str");
     }
 
 
@@ -64,56 +71,60 @@ public class KafkaElasticsearchConsumer{
         logger.info("Creating Elasticsearch high level client");
         RestHighLevelClient esClient = restHighLevelClient();
 
-        logger.info("Creating kafka consumer and subscribe to the topic");
+        logger.info("Creating kafka consumer and subscribing it to the topic");
         String groupId = "twitter-consumer-app";
         String topic = "twitter-topic";
         KafkaConsumer kafkaConsumer = kafkaConsumer(groupId);
         kafkaConsumer.subscribe(Collections.singleton(topic));
+        String index = "twitter-tweets";
 
         while(true){
             ConsumerRecords<String,String> records = kafkaConsumer.poll(Duration.ofMillis(100));
-
             Integer recordsCount = records.count();
-            logger.info("Received " + recordsCount + " records");
 
-            //TODO do we need to create a new bulk request each time
-            BulkRequest bulkRequest = new BulkRequest();
-            for (ConsumerRecord<String, String> record : records){
-                try {
-                    String id = extractIdFromTweet(record.value());
-                    //name of the index to send bulk request to
-                    IndexRequest indexRequest = new IndexRequest("tweets")
-                            .source(record.value(), XContentType.JSON)
-                            .id(id);
-                    bulkRequest.add(indexRequest);
-                } catch (NullPointerException e){
-                    logger.warn("skipping bad data: " + record.value());
+            if ( recordsCount > 0) {
+                logger.info("Received " + recordsCount + " Records");
+                BulkRequest bulkRequest = new BulkRequest()
+                        .timeout(TimeValue.timeValueMinutes(2))
+                        .setRefreshPolicy("wait_for")
+                        .waitForActiveShards(ActiveShardCount.ALL);
+
+                for (ConsumerRecord<String,String> record : records){
+                    try {
+                        String id = extractIdFromTweet(record.value());
+                        IndexRequest indexRequest = new IndexRequest(index)
+                                .source(record.value(), XContentType.JSON)
+                                .id(id);
+                        bulkRequest.add(indexRequest);
+                    } catch (NullPointerException | JSONException e) {
+                        logger.warn("Bad data received from Twitter, skipping it");
+                    }
                 }
-            }
 
-            //TODO should we check if records count is 0 much earlier
-            if (recordsCount > 0){
                 try {
                     BulkResponse bulkResponse = esClient.bulk(bulkRequest, RequestOptions.DEFAULT);
-                    logger.info("Committing the offset");
-                    //TODO we should not commit until the bulk indexing has successfully finished
-                    //all the way to shard replication in Elasticsearch
-                    kafkaConsumer.commitSync();
-                    logger.info("Offsets have been committed");
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                    if (!bulkResponse.hasFailures()){
+                        kafkaConsumer.commitSync();
+                    } else {
+                        for (BulkItemResponse bulkItemResponse : bulkResponse) {
+                            if (bulkItemResponse.isFailed()) {
+                                //log and ship to a DLQ
+                                logger.warn("Indexing operation failed with reason: "
+                                        + bulkItemResponse.getFailureMessage());
+                                //TODO implement a DLQ in Java
+                                //insertToDeadLetterQueue(bulkItemResponse.);
+                            }
+                        }
                     }
                 } catch (IOException e) {
+                    logger.warn("Encountered an exception");
                     e.printStackTrace();
                 }
+            } else {
+                logger.info("Received " + recordsCount + " Records, polling again");
             }
 
         }
-
-    //TODO Close the client gracefully
-
     }
 }
 
