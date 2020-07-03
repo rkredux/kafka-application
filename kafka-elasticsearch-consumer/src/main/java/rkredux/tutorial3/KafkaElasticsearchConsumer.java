@@ -123,7 +123,12 @@ public class KafkaElasticsearchConsumer{
             } else {
                 logger.info("Received " + recordsCount + " Records, polling again");
             }
-
+            //sleep before going back to polling again
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
