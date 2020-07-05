@@ -6,6 +6,7 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="java-multi-threading" />
         <module name="kafka-twitter-producer" />
         <module name="kafka-elasticsearch-consumer" />
         <module name="kafka-basics" />
