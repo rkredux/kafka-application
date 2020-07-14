@@ -71,8 +71,6 @@ public class VaultApp {
         }
     }
 
-    //TODO set up an abstract class
-    //TODO set up priority for the threads
     private static class Robber extends Thread{
         private final Vault vault;
         private final String name;
