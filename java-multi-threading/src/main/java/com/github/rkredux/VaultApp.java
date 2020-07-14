@@ -1,7 +1,6 @@
 package com.github.rkredux;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -11,7 +10,11 @@ public class VaultApp {
         Random rand = new Random();
         int password = rand.nextInt(100);
         Vault vault = new Vault(password);
-        //start four robber threads
+
+        int numberOfSecondsToCount = 10;
+        Police police = new Police(numberOfSecondsToCount);
+        police.start();
+
         Robber robberOne = new Robber(vault, "RobberOne");
         Robber robberTwo = new Robber(vault, "RobberTwo");
         Robber robberThree = new Robber(vault, "RobberThree");
@@ -29,6 +32,7 @@ public class VaultApp {
     }
 
     private static class Vault {
+
         private final int password;
         public Vault(int password) {
             this.password = password;
@@ -44,6 +48,31 @@ public class VaultApp {
         }
     }
 
+    private static class Police extends Thread{
+
+        private final int secondsToCount;
+        private Police(int secondsToCount) {
+            this.secondsToCount = secondsToCount;
+        }
+
+        @Override
+        public void run() {
+            super.run();
+            for (int i=0; i< secondsToCount; i++){
+                try {
+                    Thread.currentThread().sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Police Count :" + i);
+            }
+            System.out.println("Police caught the Robber, game over");
+            System.exit(0);
+        }
+    }
+
+    //TODO set up an abstract class
+    //TODO set up priority for the threads
     private static class Robber extends Thread{
         private final Vault vault;
         private final String name;
@@ -71,7 +100,6 @@ public class VaultApp {
                     passWordGuessed = true;
                     System.exit(0);
                 };
-                //System.out.println("Password not guessed correctly in " + counter + " attempt, attempting again");
                 counter = counter + 1;
             }
         }
