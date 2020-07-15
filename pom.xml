@@ -26,5 +26,6 @@
         <module>kafka-elasticsearch-consumer</module>
         <module>kafka-streams-filter-tweets</module>
         <module>java-multi-threading</module>
+        <module>kafka-streams-applications</module>
     </modules>
 </project>

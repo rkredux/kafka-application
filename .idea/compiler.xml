@@ -6,12 +6,16 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="java-multi-threading" />
-        <module name="kafka-twitter-producer" />
-        <module name="kafka-elasticsearch-consumer" />
         <module name="kafka-basics" />
+        <module name="kafka-elasticsearch-consumer" />
+        <module name="kafka-twitter-producer" />
+        <module name="kafka-streams-applications" />
         <module name="kafka-streams-filter-tweets" />
+        <module name="java-multi-threading" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="kafka-streams-word-counter" target="8" />
+    </bytecodeTargetLevel>
   </component>
 </project>
