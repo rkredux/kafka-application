@@ -32,5 +32,7 @@ public class WordCounterStreamsApp {
 
         KafkaStreams streams = new KafkaStreams(builder.build(), props);
         streams.start();
+        System.out.println(streams.toString());
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> streams.close()));
     }
 }
