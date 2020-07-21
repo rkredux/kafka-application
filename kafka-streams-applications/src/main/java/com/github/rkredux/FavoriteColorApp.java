@@ -1,7 +1,9 @@
 package com.github.rkredux;
 
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
@@ -15,11 +17,10 @@ import java.util.Properties;
 public class FavoriteColorApp {
 
     public static void main(String[] args) {
-        String userColorInputTopic = "user-color-topic";
-        String favoriteColorOutputTopic = "favorite-color-count-topic";
 
-        //TODO -
-        // topic helper class - create topic if does not exist
+        String userInputTopic = "user-input-topic";
+        String userFavoriteColorTopic = "userFavoriteColorTopic";
+        String favoriteColorCountTopic = "favorite-color-count-topic";
 
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "favorite-color-app");
@@ -28,20 +29,32 @@ public class FavoriteColorApp {
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
         StreamsBuilder builder = new StreamsBuilder();
-        KStream<String, String> inputUserColorStream = builder.stream(userColorInputTopic);
-        KTable<String, Long> colorCountTable = inputUserColorStream
-                .filter((user,color) -> Arrays.asList("red","blue","green").contains(color))
-                .toTable()
+
+        KStream<String, String>  userInput = builder.stream(userInputTopic);
+        //cleaning
+        userInput
+                .filter((key,value) -> value.contains(","))
+                .selectKey((key,value) -> value.split(",")[0])
+                .mapValues((key,value) -> value.split(",")[1])
+                .mapValues((key,value) -> value.toLowerCase())
+                .filter((user,color) -> Arrays.asList("red", "blue", "green").contains(color))
+                .to(userFavoriteColorTopic);
+
+        KTable<String, String> usersAndColorsCountTable = builder.table(userFavoriteColorTopic);
+        //aggregation
+        KTable <String, Long> colorCountTable = usersAndColorsCountTable
+                .groupBy((user,color) -> new KeyValue<>(color, color))
+                .count(Named.as("CountsByColors"));
+
+        colorCountTable
                 .toStream()
-                .selectKey((user,color) -> color)
-                .groupByKey()
-                .count(Named.as("colorCounts"));
-        colorCountTable.toStream().to(favoriteColorOutputTopic, Produced.with(Serdes.String(), Serdes.Long()));
+                .to(favoriteColorCountTopic);
 
         KafkaStreams streamsApp = new KafkaStreams(builder.build(), props);
         streamsApp.start();
+
         System.out.println(streamsApp.toString());
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> streamsApp.close()));
+        Runtime.getRuntime().addShutdownHook(new Thread(streamsApp::close));
 
     }
 }
