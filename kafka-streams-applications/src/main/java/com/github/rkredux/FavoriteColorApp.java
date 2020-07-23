@@ -1,6 +1,5 @@
 package com.github.rkredux;
 
-import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -9,7 +8,6 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Named;
-import org.apache.kafka.streams.kstream.Produced;
 
 import java.util.Arrays;
 import java.util.Properties;
@@ -21,6 +19,8 @@ public class FavoriteColorApp {
         String userInputTopic = "user-input-topic";
         String userFavoriteColorTopic = "userFavoriteColorTopic";
         String favoriteColorCountTopic = "favorite-color-count-topic";
+
+        //TODO - create the missing topics programmatically here
 
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "favorite-color-app");
@@ -51,10 +51,10 @@ public class FavoriteColorApp {
                 .to(favoriteColorCountTopic);
 
         KafkaStreams streamsApp = new KafkaStreams(builder.build(), props);
+        streamsApp.cleanUp();
         streamsApp.start();
 
         System.out.println(streamsApp.toString());
         Runtime.getRuntime().addShutdownHook(new Thread(streamsApp::close));
-
     }
 }
