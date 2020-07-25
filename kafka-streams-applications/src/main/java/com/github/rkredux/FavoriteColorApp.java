@@ -35,15 +35,14 @@ public class FavoriteColorApp {
         userInput
                 .filter((key,value) -> value.contains(","))
                 .selectKey((key,value) -> value.split(",")[0])
-                .mapValues((key,value) -> value.split(",")[1])
-                .mapValues((key,value) -> value.toLowerCase())
+                .mapValues((key,value) -> (value.split(",")[1]).toLowerCase())
                 .filter((user,color) -> Arrays.asList("red", "blue", "green").contains(color))
                 .to(userFavoriteColorTopic);
 
         KTable<String, String> usersAndColorsCountTable = builder.table(userFavoriteColorTopic);
         //aggregation
         KTable <String, Long> colorCountTable = usersAndColorsCountTable
-                .groupBy((user,color) -> new KeyValue<>(color, color))
+                .groupBy((user,color) -> KeyValue.pair(color, color))
                 .count(Named.as("CountsByColors"));
 
         colorCountTable
