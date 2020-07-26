@@ -7,13 +7,13 @@ bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 -
 
 #launch a Kafka console consumer
 bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 \
---topic insertNameOfTopic \
+--topic customer-transactions-topic \
 --from-beginning \
 --formatter kafka.tools.DefaultMessageFormatter \
 --property print.key=true \
 --property print.value=true \
 --property key.deserializer=org.apache.kafka.common.serialization.StringDeserializer \
---property value.deserializer=org.apache.kafka.common.serialization.LongDeserializer
+--property value.deserializer=org.apache.kafka.common.serialization.StringDeserializer
 
 #produce data to the application
 bin/kafka-console-producer.sh --broker-list localhost:9092 --topic insertNameOfTopic
@@ -21,3 +21,6 @@ bin/kafka-console-producer.sh --broker-list localhost:9092 --topic insertNameOfT
 
 #list all the topics in Kafka
 bin/kafka-topics.sh --list --zookeeper localhost:2181
+
+#delete topic
+bin/kafka-topics.sh --delete --zookeeper localhost:2181  --topic topic_name
