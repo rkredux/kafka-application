@@ -1,26 +1,25 @@
 package com.github.rkredux;
 
-import com.sun.jmx.remote.util.ClassLogger;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.Date;
 import java.util.Properties;
 import java.util.UUID;
+import java.sql.Timestamp;
 
 public class BankBalanceApp {
     public static void main(String[] args) {
-    //    Multi-threaded application
-    //    streams app thread - consume, do aggregation and produce to output topic
-    //    producer app thread - produce transactions and write to topic
-
         String bootstrapServers = "127.0.0.1:9092";
         String topicName = "customer-transactions-topic";
-        Integer countOfTransactions = 100000;
+        Integer countOfTransactions = 10;
         BankTransactionsProducer bankTransactionsProducer = new BankTransactionsProducer(bootstrapServers, topicName, countOfTransactions);
         bankTransactionsProducer.start();
     }
 
     private static class BankTransactionsProducer extends Thread{
+        final Logger logger = LoggerFactory.getLogger(BankTransactionsProducer.class);
         private final String bootstrapServers;
         private final String topicName;
         private final Integer countOfTransactions;
@@ -51,10 +50,14 @@ public class BankBalanceApp {
             }
 
             for (int transactionCount=0; transactionCount < countOfTransactions; transactionCount++){
-                //TODO implement something to pick the right customer here
-                String key = null;
-                Object value = null;
-                ProducerRecord<String, Object> record = new ProducerRecord<String, Object>(topicName,key, value);
+                Integer customerIndex = transactionCount % users.length;
+                Date date = new Date();
+                String key = bankCustomers[customerIndex].getCustomerId();
+                String value = bankCustomers[customerIndex].getCustomerName() + ","
+                        + transactionCount + ","
+                        + new Timestamp(date.getTime());
+
+                ProducerRecord<String, String> record = new ProducerRecord<String, String>(topicName,key, value);
                 producer.send(record, new Callback() {
                     public void onCompletion(RecordMetadata recordMetadata, Exception e) {
                         if (e == null) {
@@ -68,21 +71,28 @@ public class BankBalanceApp {
                             logger.error("Error while producing:" + e);
                         }
                     }
-                //TODO what does this get do.
-                }).get();
+                });
             }
-
+            producer.flush();
+            producer.close();
         }
     }
 
     private static class BankCustomer{
         private final String userName;
-        private final String customerId;
+        private final String customerId; 
 
-        public BankCustomer(String user) {
+        private BankCustomer(String user) {
              this.userName = user;
              this.customerId = UUID.randomUUID().toString();
         }
+        private String getCustomerId(){
+            return this.customerId;
+        }
+        private String getCustomerName(){
+            return this.userName;
+        }
     }
+
 
 }
