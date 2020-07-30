@@ -77,7 +77,7 @@ public class BankBalanceApp {
             for (int i=0; i< users.length; i++) {
                 bankCustomers[i] = new BankCustomer(users[i]);
             }
-
+            //TODO - adjust transaction object to JSON object to make it compatible with streams app
             for (int transactionCount=0; transactionCount < countOfTransactions; transactionCount++){
                 Integer customerIndex = transactionCount % users.length;
                 Date date = new Date();
