@@ -131,22 +131,6 @@ public class BankBalanceApp {
 
     }
 
-    //private static class BankCustomer{
-    //    private final String userName;
-    //    private final String customerId;
-    //
-    //    private BankCustomer(String user) {
-    //         this.userName = user;
-    //         this.customerId = UUID.randomUUID().toString();
-    //    }
-    //    private String getCustomerId(){
-    //        return this.customerId;
-    //    }
-    //    private String getCustomerName(){
-    //        return this.userName;
-    //    }
-    //}
-
 
     private static class BankBalanceAggregator extends Thread {
 
