@@ -14,6 +14,9 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,22 +32,25 @@ public class BankBalanceApp {
         String bootstrapServers = "127.0.0.1:9092";
         String customerTransactionsTopic = "customer-transactions-topic";
         String aggregatedBankBalanceTopic = "customer-balance-topic";
+
+        String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
         Integer countOfTransactions = 10;
 
         BankTransactionsProducer bankTransactionsProducer = new BankTransactionsProducer(
                 bootstrapServers,
                 customerTransactionsTopic,
+                users,
                 countOfTransactions
         );
         System.out.println("Starting generating bank transactions");
         bankTransactionsProducer.start();
 
-        BankBalanceAggregator bankBalanceAggregator = new BankBalanceAggregator(
-                customerTransactionsTopic,
-                aggregatedBankBalanceTopic
-        );
-        System.out.println("Starting bank balance aggregation stream processing");
-        bankBalanceAggregator.start();
+        //BankBalanceAggregator bankBalanceAggregator = new BankBalanceAggregator(
+        //        customerTransactionsTopic,
+        //        aggregatedBankBalanceTopic
+        //);
+        //System.out.println("Starting bank balance aggregation stream processing");
+        //bankBalanceAggregator.start();
     }
 
     private static class BankTransactionsProducer extends Thread{
@@ -52,10 +58,12 @@ public class BankBalanceApp {
         private final String bootstrapServers;
         private final String topicName;
         private final Integer countOfTransactions;
+        private final String[] users;
 
-        private BankTransactionsProducer(String bootstrapServers, String topicName, Integer countOfTransactions) {
+        private BankTransactionsProducer(String bootstrapServers, String topicName, String[] users, Integer countOfTransactions) {
             this.bootstrapServers = bootstrapServers;
             this.topicName = topicName;
+            this.users = users; 
             this.countOfTransactions = countOfTransactions;
         }
 
@@ -71,13 +79,13 @@ public class BankBalanceApp {
             properties.setProperty("acks", "all");
             KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
 
-            //bank users
-            String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
-            BankCustomer[] bankCustomers = new BankCustomer[users.length];
-            for (int i=0; i< users.length; i++) {
-                bankCustomers[i] = new BankCustomer(users[i]);
-            }
-            //TODO - adjust transaction object to JSON object to make it compatible with streams app
+            //generate bank users
+            JSONArray bankCustomers = generateCustomerArray(users);
+
+            //TODO - generate the transaction schema
+            //transactionSchema
+            //transactionUUID, {“customerUUID”: “”, “name”: “Rahul”, “timeOfTransaction”: “timestamp”, “amount”: amount }
+
             for (int transactionCount=0; transactionCount < countOfTransactions; transactionCount++){
                 Integer customerIndex = transactionCount % users.length;
                 Date date = new Date();
@@ -105,23 +113,39 @@ public class BankBalanceApp {
             producer.flush();
             producer.close();
         }
+
+        private static JSONArray generateCustomerArray(String[] listOfUsers) {
+            JSONArray customerArray = new JSONArray();
+            for (int i=0; i< listOfUsers.length; i++) {
+                JSONObject customerObject = new JSONObject();
+                try {
+                    customerObject.put("customerId", UUID.randomUUID().toString());
+                    customerObject.put("customerName", listOfUsers[i]);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                customerArray.put(customerObject);
+            }
+            return customerArray; 
+        }
+
     }
 
-    private static class BankCustomer{
-        private final String userName;
-        private final String customerId; 
-
-        private BankCustomer(String user) {
-             this.userName = user;
-             this.customerId = UUID.randomUUID().toString();
-        }
-        private String getCustomerId(){
-            return this.customerId;
-        }
-        private String getCustomerName(){
-            return this.userName;
-        }
-    }
+    //private static class BankCustomer{
+    //    private final String userName;
+    //    private final String customerId;
+    //
+    //    private BankCustomer(String user) {
+    //         this.userName = user;
+    //         this.customerId = UUID.randomUUID().toString();
+    //    }
+    //    private String getCustomerId(){
+    //        return this.customerId;
+    //    }
+    //    private String getCustomerName(){
+    //        return this.userName;
+    //    }
+    //}
 
 
     private static class BankBalanceAggregator extends Thread {
