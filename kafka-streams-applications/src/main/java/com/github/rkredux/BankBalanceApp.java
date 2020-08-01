@@ -1,7 +1,6 @@
 package com.github.rkredux;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.kafka.clients.producer.*;
@@ -19,18 +18,18 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Properties;
+import java.util.Random;
 import java.util.UUID;
-import java.sql.Timestamp;
 
 public class BankBalanceApp {
 
     public static void main(String[] args) {
         String bootstrapServers = "127.0.0.1:9092";
-        String customerTransactionsTopic = "customer-transactions-topic";
+        String customerTransactionsTopic = "transactions-topic";
         String aggregatedBankBalanceTopic = "customer-balance-topic";
 
         String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
@@ -45,12 +44,12 @@ public class BankBalanceApp {
         System.out.println("Starting generating bank transactions");
         bankTransactionsProducer.start();
 
-        //BankBalanceAggregator bankBalanceAggregator = new BankBalanceAggregator(
-        //        customerTransactionsTopic,
-        //        aggregatedBankBalanceTopic
-        //);
-        //System.out.println("Starting bank balance aggregation stream processing");
-        //bankBalanceAggregator.start();
+        BankBalanceAggregator bankBalanceAggregator = new BankBalanceAggregator(
+                customerTransactionsTopic,
+                aggregatedBankBalanceTopic
+        );
+        System.out.println("Starting bank balance aggregation stream processing");
+        bankBalanceAggregator.start();
     }
 
     private static class BankTransactionsProducer extends Thread{
@@ -77,24 +76,34 @@ public class BankBalanceApp {
             properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
             properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
             properties.setProperty("acks", "all");
+            properties.setProperty(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
             KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
 
             //generate bank users
             JSONArray bankCustomers = generateCustomerArray(users);
 
-            //TODO - generate the transaction schema
-            //transactionSchema
-            //transactionUUID, {“customerUUID”: “”, “name”: “Rahul”, “timeOfTransaction”: “timestamp”, “amount”: amount }
-
             for (int transactionCount=0; transactionCount < countOfTransactions; transactionCount++){
-                Integer customerIndex = transactionCount % users.length;
-                Date date = new Date();
-                String key = bankCustomers[customerIndex].getCustomerId();
-                String value = bankCustomers[customerIndex].getCustomerName() + ","
-                        + transactionCount + ","
-                        + new Timestamp(date.getTime());
 
-                ProducerRecord<String, String> record = new ProducerRecord<String, String>(topicName,key, value);
+                try {
+                    Thread.currentThread().sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                Integer customerIndex = transactionCount % bankCustomers.length();
+                String customerName = null;
+                String customerId = null;
+                try {
+                    customerName = (String) bankCustomers.getJSONObject(customerIndex).get("customerName");
+                    customerId = (String) bankCustomers.getJSONObject(customerIndex).get("customerId");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+                String transactionId = UUID.randomUUID().toString();
+                String value = generateTransactionRecord(customerName, customerId);
+
+                ProducerRecord<String, String> record = new ProducerRecord<String, String>(topicName,transactionId,value);
                 producer.send(record, new Callback() {
                     public void onCompletion(RecordMetadata recordMetadata, Exception e) {
                         if (e == null) {
@@ -127,6 +136,26 @@ public class BankBalanceApp {
                 customerArray.put(customerObject);
             }
             return customerArray; 
+        }
+
+        private static String generateTransactionRecord(String userName, String userId) {
+            //transaction timestamp
+            SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
+            Date date = new Date(System.currentTimeMillis());
+            //transaction amount
+            Random r = new Random();
+            int amount = r.nextInt(100);
+
+            JSONObject transactionRecord = new JSONObject();
+            try {
+                transactionRecord.put("customerId",userId);
+                transactionRecord.put("customerName", userName);
+                transactionRecord.put("transactionTimestamp", formatter.format(date));
+                transactionRecord.put("amount", amount);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return transactionRecord.toString();
         }
 
     }
@@ -182,7 +211,8 @@ public class BankBalanceApp {
             bankBalance.toStream().to(aggregatedBankBalanceTopic, Produced.with(Serdes.String(), jsonSerde));
 
             KafkaStreams streamsApp = new KafkaStreams(builder.build(), props);
-            //streamsApp.cleanUp();
+            //only in dev
+            streamsApp.cleanUp();
             streamsApp.start();
             System.out.println(streamsApp.toString());
             Runtime.getRuntime().addShutdownHook(new Thread(streamsApp::close));
