@@ -18,22 +18,19 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.util.Date;
-import java.util.Properties;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 public class BankBalanceApp {
 
     public static void main(String[] args) {
-        String bootstrapServers = "127.0.0.1:9092";
-        String customerTransactionsTopic = "transactions-topic";
-        String aggregatedBankBalanceTopic = "customer-balance-topic";
 
+        String bootstrapServers = "127.0.0.1:9092";
+        String customerTransactionsTopic = "final-transactions";
+        String aggregatedBankBalanceTopic = "final-balance";
         String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
-        Integer countOfTransactions = 10;
+        Integer countOfTransactions = 12;
 
         BankTransactionsProducer bankTransactionsProducer = new BankTransactionsProducer(
                 bootstrapServers,
@@ -85,7 +82,7 @@ public class BankBalanceApp {
             for (int transactionCount=0; transactionCount < countOfTransactions; transactionCount++){
 
                 try {
-                    Thread.currentThread().sleep(100);
+                    Thread.currentThread().sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -162,7 +159,6 @@ public class BankBalanceApp {
 
 
     private static class BankBalanceAggregator extends Thread {
-
         private final String aggregatedBankBalanceTopic;
         private final String customerTransactionsTopic;
 
@@ -189,17 +185,20 @@ public class BankBalanceApp {
 
             //building streams topology
             StreamsBuilder builder = new StreamsBuilder();
-
+            //the stream here is going to be <String,JsonNode because consuming with a Json Deserializer
             KStream<String, JsonNode> customerTransactions = builder.stream(customerTransactionsTopic,
                     Consumed.with(Serdes.String(), jsonSerde));
 
             //creating initial bank balance object
+            //customerId, customerName, count of transactions, max transaction time, total bank balance
             ObjectNode initialBalance = JsonNodeFactory.instance.objectNode();
+            SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
             initialBalance.put("count", 0);
             initialBalance.put("balance", 0);
-            initialBalance.put("time", Instant.ofEpochMilli(0L).toString());
+            initialBalance.put("transactionTimestamp", formatter.format(new Date( 0L * 1000 )));
 
             KTable<String, JsonNode> bankBalance = customerTransactions
+                    .selectKey((key,value) -> value.get("customerId").toString())
                     .groupByKey()
                     .aggregate(() -> initialBalance,
                             (key,transaction,balance) -> newBalance(transaction,balance),
@@ -209,10 +208,7 @@ public class BankBalanceApp {
                     );
 
             bankBalance.toStream().to(aggregatedBankBalanceTopic, Produced.with(Serdes.String(), jsonSerde));
-
             KafkaStreams streamsApp = new KafkaStreams(builder.build(), props);
-            //only in dev
-            streamsApp.cleanUp();
             streamsApp.start();
             System.out.println(streamsApp.toString());
             Runtime.getRuntime().addShutdownHook(new Thread(streamsApp::close));
@@ -220,13 +216,21 @@ public class BankBalanceApp {
 
         //function to aggregate the records
         private static JsonNode newBalance(JsonNode transaction, JsonNode balance) {
+            SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
             ObjectNode newBalance = JsonNodeFactory.instance.objectNode();
+            newBalance.put("customerName", transaction.get("customerName").toString());
             newBalance.put("count", balance.get("count").asInt() + 1);
             newBalance.put("balance", balance.get("balance").asInt() + transaction.get("amount").asInt());
-            Long balanceEpoch = Instant.parse(balance.get("time").asText()).toEpochMilli();
-            Long transactionEpoch = Instant.parse(transaction.get("time").asText()).toEpochMilli();
-            Instant newBalanceInstant = Instant.ofEpochMilli(Math.max(balanceEpoch, transactionEpoch));
-            newBalance.put("time", newBalanceInstant.toString());
+            Long balanceEpoch = null;
+            Long transactionEpoch = null;
+            try {
+                balanceEpoch = formatter.parse(balance.get("transactionTimestamp").asText()).getTime();
+                transactionEpoch = formatter.parse(transaction.get("transactionTimestamp").asText()).getTime();
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+            String newBalanceTimestamp = formatter.format(new Date(Math.max(balanceEpoch, transactionEpoch)));
+            newBalance.put("transactionTimestamp", newBalanceTimestamp);
             return newBalance;
         }
 

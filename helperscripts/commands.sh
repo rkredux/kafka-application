@@ -7,7 +7,7 @@ bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 -
 
 #launch a Kafka console consumer
 bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 \
---topic bank-transactions-topic \
+--topic final-transactions \
 --from-beginning \
 --formatter kafka.tools.DefaultMessageFormatter \
 --property print.key=true \
