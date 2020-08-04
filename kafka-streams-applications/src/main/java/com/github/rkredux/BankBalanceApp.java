@@ -27,6 +27,7 @@ public class BankBalanceApp {
     public static void main(String[] args) {
 
         String bootstrapServers = "127.0.0.1:9092";
+        //TODO- create these topics if they do not exist
         String customerTransactionsTopic = "final-transactions";
         String aggregatedBankBalanceTopic = "final-balance";
         String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
@@ -78,6 +79,7 @@ public class BankBalanceApp {
 
             //generate bank users
             JSONArray bankCustomers = generateCustomerArray(users);
+            //TODO - create a customer topic by persisting the customer info - add more attributes
 
             for (int transactionCount=0; transactionCount < countOfTransactions; transactionCount++){
 
@@ -186,6 +188,8 @@ public class BankBalanceApp {
             //building streams topology
             StreamsBuilder builder = new StreamsBuilder();
             //the stream here is going to be <String,JsonNode because consuming with a Json Deserializer
+            //TODO- join on the customer table to enrich the transactions
+            //TODO- do more aggregations on new attributes and persist to new topic
             KStream<String, JsonNode> customerTransactions = builder.stream(customerTransactionsTopic,
                     Consumed.with(Serdes.String(), jsonSerde));
 
