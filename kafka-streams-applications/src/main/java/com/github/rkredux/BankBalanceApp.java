@@ -3,6 +3,7 @@ package com.github.rkredux;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.*;
 import org.apache.kafka.common.utils.Bytes;
@@ -21,34 +22,54 @@ import org.slf4j.LoggerFactory;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 public class BankBalanceApp {
 
     public static void main(String[] args) {
 
         String bootstrapServers = "127.0.0.1:9092";
-        //TODO- create these topics if they do not exist
         String customerTransactionsTopic = "final-transactions";
         String aggregatedBankBalanceTopic = "final-balance";
-        String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
-        Integer countOfTransactions = 12;
 
-        BankTransactionsProducer bankTransactionsProducer = new BankTransactionsProducer(
-                bootstrapServers,
-                customerTransactionsTopic,
-                users,
-                countOfTransactions
-        );
-        System.out.println("Starting generating bank transactions");
-        bankTransactionsProducer.start();
+        //create the topics using the admin client
+        Properties adminClientProperties = new Properties();
+        adminClientProperties.setProperty(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        AdminClient adminClient = KafkaAdminClient.create(adminClientProperties);
+        NewTopic transactionsTopic = new NewTopic(customerTransactionsTopic,1, (short) 1);
+        NewTopic bankBalanceTopic = new NewTopic(aggregatedBankBalanceTopic,1, (short) 1);
+        Collection<NewTopic> newTopics = null;
+        newTopics.add(transactionsTopic);
+        newTopics.add(bankBalanceTopic);
+        CreateTopicsResult createTopicsResult = adminClient.createTopics(newTopics);
+        try {
+            //we want to await until all topics are created
+            createTopicsResult.all().get();
+        } catch (final Exception e) {
+            throw new RuntimeException("Failed to create topic:" + e);
+        }
 
-        BankBalanceAggregator bankBalanceAggregator = new BankBalanceAggregator(
-                customerTransactionsTopic,
-                aggregatedBankBalanceTopic
-        );
-        System.out.println("Starting bank balance aggregation stream processing");
-        bankBalanceAggregator.start();
+        //setting up users
+        //String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
+        //Integer countOfTransactions = 12;
+        //
+        //BankTransactionsProducer bankTransactionsProducer = new BankTransactionsProducer(
+        //        bootstrapServers,
+        //        customerTransactionsTopic,
+        //        users,
+        //        countOfTransactions
+        //);
+        //System.out.println("Starting generating bank transactions");
+        //bankTransactionsProducer.start();
+        //
+        //BankBalanceAggregator bankBalanceAggregator = new BankBalanceAggregator(
+        //        customerTransactionsTopic,
+        //        aggregatedBankBalanceTopic
+        //);
+        //System.out.println("Starting bank balance aggregation stream processing");
+        //bankBalanceAggregator.start();
     }
+
 
     private static class BankTransactionsProducer extends Thread{
         final Logger logger = LoggerFactory.getLogger(BankTransactionsProducer.class);
