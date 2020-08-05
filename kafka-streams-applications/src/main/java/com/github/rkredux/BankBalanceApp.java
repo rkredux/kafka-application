@@ -22,34 +22,22 @@ import org.slf4j.LoggerFactory;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 
 public class BankBalanceApp {
 
     public static void main(String[] args) {
 
         String bootstrapServers = "127.0.0.1:9092";
-        String customerTransactionsTopic = "final-transactions";
-        String aggregatedBankBalanceTopic = "final-balance";
+        String customerTransactionsTopic = "test-08.05-input";
+        String aggregatedBankBalanceTopic = "test-08.05-output";
 
-        //create the topics using the admin client
-        Properties adminClientProperties = new Properties();
-        adminClientProperties.setProperty(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        AdminClient adminClient = KafkaAdminClient.create(adminClientProperties);
         NewTopic transactionsTopic = new NewTopic(customerTransactionsTopic,1, (short) 1);
         NewTopic bankBalanceTopic = new NewTopic(aggregatedBankBalanceTopic,1, (short) 1);
-        Collection<NewTopic> newTopics = null;
+        Collection<NewTopic> newTopics = new ArrayList<>();
         newTopics.add(transactionsTopic);
         newTopics.add(bankBalanceTopic);
-        CreateTopicsResult createTopicsResult = adminClient.createTopics(newTopics);
-        try {
-            //we want to await until all topics are created
-            createTopicsResult.all().get();
-        } catch (final Exception e) {
-            throw new RuntimeException("Failed to create topic:" + e);
-        }
+        createTopics(bootstrapServers, newTopics);
 
-        //setting up users
         String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
         Integer countOfTransactions = 12;
 
@@ -68,6 +56,20 @@ public class BankBalanceApp {
         );
         System.out.println("Starting bank balance aggregation stream processing");
         bankBalanceAggregator.start();
+    }
+
+    private static void createTopics(String bootstrapServers, Collection<NewTopic> newTopics){
+        Properties adminClientProperties = new Properties();
+        adminClientProperties.setProperty(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        AdminClient adminClient = KafkaAdminClient.create(adminClientProperties);
+        CreateTopicsResult createTopicsResult = adminClient.createTopics(newTopics);
+        try {
+            //we want to await until all topics are created
+            createTopicsResult.all().get();
+        } catch (final Exception e){
+            System.out.println("Failed to create topic, exiting the application: " + e);
+            System.exit(1);
+        }
     }
 
 
