@@ -50,24 +50,24 @@ public class BankBalanceApp {
         }
 
         //setting up users
-        //String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
-        //Integer countOfTransactions = 12;
-        //
-        //BankTransactionsProducer bankTransactionsProducer = new BankTransactionsProducer(
-        //        bootstrapServers,
-        //        customerTransactionsTopic,
-        //        users,
-        //        countOfTransactions
-        //);
-        //System.out.println("Starting generating bank transactions");
-        //bankTransactionsProducer.start();
-        //
-        //BankBalanceAggregator bankBalanceAggregator = new BankBalanceAggregator(
-        //        customerTransactionsTopic,
-        //        aggregatedBankBalanceTopic
-        //);
-        //System.out.println("Starting bank balance aggregation stream processing");
-        //bankBalanceAggregator.start();
+        String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
+        Integer countOfTransactions = 12;
+
+        BankTransactionsProducer bankTransactionsProducer = new BankTransactionsProducer(
+                bootstrapServers,
+                customerTransactionsTopic,
+                users,
+                countOfTransactions
+        );
+        System.out.println("Starting generating bank transactions");
+        bankTransactionsProducer.start();
+
+        BankBalanceAggregator bankBalanceAggregator = new BankBalanceAggregator(
+                customerTransactionsTopic,
+                aggregatedBankBalanceTopic
+        );
+        System.out.println("Starting bank balance aggregation stream processing");
+        bankBalanceAggregator.start();
     }
 
 
