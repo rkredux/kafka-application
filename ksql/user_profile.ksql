@@ -1,11 +1,11 @@
 SET 'auto.offset.reset'='earliest';
 
 CREATE STREAM user_profile_pretty AS
-SELECT firstname || ' '
-|| ucase(lastname)
-|| ' from ' || countrycode
-|| ' has a rating of ' || cast(rating as DOUBLE) || ' stars. '
-|| CASE WHEN rating < 2.5 THEN 'Poor'
+SELECT firstname + ' '
++ ucase(lastname)
++ ' from ' + countrycode
++ ' has a rating of ' + cast(rating as VARCHAR) + ' stars. '
++ CASE WHEN rating < 2.5 THEN 'Poor'
         WHEN rating between 2.5 AND 4.2 THEN 'Good'
         ELSE 'Excellent'
    END AS description
