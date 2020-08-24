@@ -1,5 +1,6 @@
 SET 'auto.offset.reset'='earliest';
 
+-- generate a stream with user rating categorized into poor, good and excellent basis the rating
 CREATE STREAM user_profile_pretty AS
 SELECT firstname + ' '
 + ucase(lastname)
@@ -10,3 +11,23 @@ SELECT firstname + ' '
         ELSE 'Excellent'
    END AS description
 FROM userprofile;
+
+
+-- generate a table of distinct country codes
+CREATE TABLE distinct_country_code_table AS
+SELECT COUNTRYCODE
+FROM USERPROFILESTREAMTEST;
+GROUP BY COUNTRYCODE
+HAVING COUNT(COUNTRYCODE) = 1;
+
+
+-- JOIN userprofile stream with countryname table to create a new stream
+CREATE STREAM USERPROFILE_WITH_COUNTRYNAME AS
+SELECT
+UP.firstname,
+UP.lastname,
+CC.countrycode,
+CC.countryname
+FROM USERPROFILESTREAMTEST UP
+LEFT OUTER JOIN COUNTRYTABLE CC
+ON UP.COUNTRYCODE = CC.COUNTRYCODE;
