@@ -31,3 +31,8 @@ CC.countryname
 FROM USERPROFILESTREAMTEST UP
 LEFT OUTER JOIN COUNTRYTABLE CC
 ON UP.COUNTRYCODE = CC.COUNTRYCODE;
+
+
+-- create a stream of driver locations and also create the underlying topic in the broker
+CREATE STREAM DRIVERLOCATIONS (driverId BIGINT, countryCode VARCHAR, city VARCHAR, driverName VARCHAR)
+WITH (KAFKA_TOPIC='driverlocations', KEY='driverId', VALUE_FORMAT='JSON', PARTITIONS=1);
