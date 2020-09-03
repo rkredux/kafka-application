@@ -28,14 +28,17 @@ public class BankBalanceApp {
     public static void main(String[] args) {
 
         String bootstrapServers = "127.0.0.1:9092";
-        String customerTransactionsTopic = "test-08.05-input";
-        String aggregatedBankBalanceTopic = "test-08.05-output";
+        String usersTopic = "users";
+        String customerTransactionsTopic = "transactions";
+        String aggregatedBankBalanceTopic = "balance";
 
         NewTopic transactionsTopic = new NewTopic(customerTransactionsTopic,1, (short) 1);
         NewTopic bankBalanceTopic = new NewTopic(aggregatedBankBalanceTopic,1, (short) 1);
+        NewTopic customersTopic = new NewTopic(usersTopic,1, (short) 1);
         Collection<NewTopic> newTopics = new ArrayList<>();
         newTopics.add(transactionsTopic);
         newTopics.add(bankBalanceTopic);
+        newTopics.add(customersTopic);
         createTopics(bootstrapServers, newTopics);
 
         String[] users = new String[] {"Rahul", "Meghan", "Alivia", "Priyanka", "Ravdip", "Angad"};
@@ -104,6 +107,9 @@ public class BankBalanceApp {
             JSONArray bankCustomers = generateCustomerArray(users);
             //TODO - create a customer topic by persisting the customer info - add more attributes
 
+
+
+
             for (int transactionCount=0; transactionCount < countOfTransactions; transactionCount++){
 
                 try {
@@ -146,12 +152,14 @@ public class BankBalanceApp {
         }
 
         private static JSONArray generateCustomerArray(String[] listOfUsers) {
+            String[] locations = new String[] {"DC", "NY", "LA", "BO", "SF", "DEL"};
             JSONArray customerArray = new JSONArray();
             for (int i=0; i< listOfUsers.length; i++) {
                 JSONObject customerObject = new JSONObject();
                 try {
                     customerObject.put("customerId", UUID.randomUUID().toString());
                     customerObject.put("customerName", listOfUsers[i]);
+                    customerObject.put("customerLocation", locations[i]);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }

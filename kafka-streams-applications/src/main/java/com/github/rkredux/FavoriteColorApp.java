@@ -8,14 +8,12 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Named;
-
 import java.util.Arrays;
 import java.util.Properties;
 
 public class FavoriteColorApp {
 
     public static void main(String[] args) {
-
         String userInputTopic = "user-input-topic";
         String userFavoriteColorTopic = "userFavoriteColorTopic";
         String favoriteColorCountTopic = "favorite-color-count-topic";
