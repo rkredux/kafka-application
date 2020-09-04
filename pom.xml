@@ -46,5 +46,6 @@
         <module>kafka-streams-filter-tweets</module>
         <module>java-multi-threading</module>
         <module>kafka-streams-applications</module>
+        <module>kafka-avro-java</module>
     </modules>
 </project>

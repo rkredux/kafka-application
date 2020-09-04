@@ -9,6 +9,7 @@
         <module name="kafka-basics" />
         <module name="kafka-elasticsearch-consumer" />
         <module name="kafka-twitter-producer" />
+        <module name="kafka-avro-java" />
         <module name="kafka-streams-applications" />
         <module name="kafka-streams-filter-tweets" />
         <module name="java-multi-threading" />
